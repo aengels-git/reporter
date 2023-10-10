@@ -6,11 +6,12 @@ import pickle
 import pandas as pd 
 import shutil
 import webbrowser
+import threading
 
 from .HtmlHeader import HtmlHeader
 from .CodeChunk import CodeChunk
 from .utils import DataPlot, DataTable
-
+from .TextChunk import TextChunk
 class HtmlDocument:
     def __init__(self,title="",author="",theme="default"):
         self.header = HtmlHeader(title=title,
@@ -44,15 +45,15 @@ class HtmlDocument:
     def __render(self, rewrite_qmd = True):
         if rewrite_qmd:
             self.__write_qmd()
-        process = subprocess.Popen(['quarto','render', os.path.basename(self.path)],
+        subprocess.Popen(['quarto','render', os.path.basename(self.path)],
                                    stdin =subprocess.PIPE,
                                    stderr =subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    universal_newlines=True,
+                                   shell=True,
                                    cwd=os.path.dirname(self.path)) 
-
-        self.error = ''.join(process.stderr.readlines())
         return("success")
+    
     def __open_html(self):
         webbrowser.open(os.path.splitext(self.path)[0] + ".html")
 
@@ -76,11 +77,17 @@ class HtmlDocument:
             pd.DataFrame({"type":"plot","name":name,"object":[dplot]})
         ]).reset_index(drop=True)
 
-    def add_table(self, tab, name):
+    def add_table(self, tab:pd.DataFrame, name:str):
         dtab = DataTable(tab)
         self.data = pd.concat([
             self.data,
             pd.DataFrame({"type":"table","name":name,"object":[dtab]})
+        ]).reset_index(drop=True)
+
+    def text(self, content:str, level:int=0):
+        self.data = pd.concat([
+            self.data,
+            pd.DataFrame({"type":"text","name":"text","object":[TextChunk(content=content, level=level)]})
         ]).reset_index(drop=True)
 
     def change_object(self,element,id=None,name=None, width=8, height=4):
@@ -95,17 +102,44 @@ class HtmlDocument:
        #     self.data.at[report2.data.query("name == '{}'".format(name)).index[0],"object"] = Dataplot(ax)
         
     def render(self, rewrite_qmd = True):
-        self.__render(rewrite_qmd = rewrite_qmd)
-        self.__open_html()
-        
-    def save(self, path, rerender = True):
+ 
+        if rewrite_qmd:
+            self.__write_qmd()
+
+        def bg_render(document):
+            process = subprocess.Popen(['quarto','render', os.path.basename(document.path)],
+                            stdin =subprocess.PIPE,
+                            stderr =subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            universal_newlines=True,
+                            shell=True,
+                            cwd=os.path.dirname(document.path))  
+            print(''.join(process.stdout.readlines()))
+            print(''.join(process.stderr.readlines()))
+            process.wait()
+            document.__open_html()
+        x = threading.Thread(target=bg_render, args=(self,))
+        x.start()
+
+    def save(self, path):
         extension = os.path.splitext(path)[1]
         if extension == ".html":
-            if rerender:
-                self.__render()
-                shutil.copy2(os.path.splitext(self.path)[0] + ".html", path)
-            else:
-                shutil.copy2(os.path.splitext(self.path)[0] + ".html", path)
+            self.__write_qmd()
+            def bg_save_html(document, path):
+                process = subprocess.Popen(['quarto','render', os.path.basename(document.path)],
+                                stdin =subprocess.PIPE,
+                                stderr =subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                universal_newlines=True,
+                                shell=True,
+                                cwd=os.path.dirname(document.path))  
+                print(''.join(process.stdout.readlines()))
+                print(''.join(process.stderr.readlines()))
+                process.wait()
+                shutil.copy2(os.path.splitext(document.path)[0] + ".html", path)
+
+            x = threading.Thread(target=bg_save_html, kwargs={'document': self,'path': path})
+            x.start()
         elif extension == ".pkl":
             with open(path, 'wb') as outp:  # Overwrites any existing file.
                 pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)

@@ -31,7 +31,7 @@ class CodeChunk:
                     "#| error: {}\n".format(self.error),
                     "#| include: {}\n".format(self.include),
                     "{}\n".format(self.content),
-                    "```"
+                    "```\n"
                     ]
         output = "".join(i for i in chunk)
         return output

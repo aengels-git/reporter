@@ -28,7 +28,7 @@ class HtmlHeader:
                     "".ljust(4)+"toc-depth: {}\n".format(self.toc_depth),
                     "".ljust(4)+"toc-expand: {}\n".format(self.toc_expand),
                     "".ljust(4)+"toc-location: {}\n".format(self.toc_location),
-                    "---"
+                    "---\n"
                     ]
         output = "".join(i for i in header)
         return output
