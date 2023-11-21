@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reporter"
-version = "0.0.2"
+version = "0.0.3"
 description = "Interactive HTML reports from python"
 readme = "README.md"
 authors = [
