@@ -4,7 +4,7 @@ import random
 import pickle
 import string
 import matplotlib.pyplot as plt 
-
+import seaborn.objects as so
 from typing import Union
 import pandas as pd
 def prep_format(
@@ -51,7 +51,10 @@ class DataPlot:
     def plot(self):
         with open(self.path, 'rb') as f: 
             p = pickle.load(f) 
-            return p.plot(width=self.width, height=self.height)
+            if isinstance(p, so.Plot):
+                return p.layout(size=(self.width, self.height))
+            else:
+                return p.plot(width=self.width, height=self.height)
             
     def load(self):
         with open(self.path, 'rb') as f: 
@@ -61,7 +64,7 @@ class DataPlot:
     def create(self):
         output = ["with open(r'{}','rb') as fid:\n".format(self.path),
                   '    p = pickle.load(fid)\n',
-                  f'p.plot({self.width}, {self.height})\n']
+                  f'p.plot()\n'] # {self.width}, {self.height}
         output = "".join(i for i in output)
         return output
 
