@@ -99,3 +99,11 @@ def generate_name(length=10):
     letters = string.ascii_lowercase
     name = ''.join(random.choice(letters) for i in range(length))
     return name
+
+
+def start_r_project(path):
+    if os.path.splitext(path)[-1] != '.Rproj':
+        raise ValueError(f"{path} does not end with .Rproj")
+    content = "Version: 1.0\n\nRestoreWorkspace: Default\nSaveWorkspace: Default\nAlwaysSaveHistory: Default\n\nEnableCodeIndexing: Yes\nUseSpacesForTab: Yes\nNumSpacesForTab: 2\nEncoding: UTF-8\n\nRnwWeave: Sweave\nLaTeX: pdfLaTeX"
+    with open(path, "w+") as f:
+        f.write(content)
